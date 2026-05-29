@@ -1,0 +1,13 @@
+target/
+
+# Local environment files
+.env
+.env.local
+.env.*.local
+
+# Editor and OS noise
+.DS_Store
+Thumbs.db
+.vscode/
+
+FILE-STRUCTURE.md
