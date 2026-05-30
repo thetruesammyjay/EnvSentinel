@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 use crate::cli::args::CommandOptions;
 use crate::commands::{self, CommandContext, CommandOutcome};
-use crate::env::parser::parse_file;
+use crate::env::validate;
 
 fn resolve_source_path(options: &CommandOptions, context: &CommandContext) -> Option<PathBuf> {
     if let Some(first_target) = options.targets.first() {
@@ -35,8 +35,8 @@ pub fn run(options: CommandOptions, context: &CommandContext) -> CommandOutcome 
             return CommandOutcome::new(
                 2,
                 format!(
-                    "No source .env file found under {}. Provide one target file to bootstrap from.",
-                    context.root.display()
+                    "No source .env file found at {}. Create one before running init.",
+                    context.root.join(".env").display()
                 ),
             )
         }
@@ -56,17 +56,23 @@ pub fn run(options: CommandOptions, context: &CommandContext) -> CommandOutcome 
         );
     }
 
-    let source_contents = match fs::read_to_string(&source_path) {
-        Ok(contents) => contents,
-        Err(error) => {
-            return CommandOutcome::new(
-                1,
-                format!("{}: {}", source_path.display(), error),
-            )
-        }
+    let source_file = match commands::load_env_file(&source_path) {
+        Ok(file) => file,
+        Err(error) => return CommandOutcome::new(1, error),
     };
 
-    let source_file = parse_file(&source_path, &source_contents);
+    let validation = validate::validate(&source_file);
+    if !validation.errors.is_empty() {
+        return CommandOutcome::new(
+            1,
+            format!(
+                "{} has validation errors: {}",
+                source_path.display(),
+                commands::format_list(&validation.errors)
+            ),
+        );
+    }
+
     let mut lines = Vec::new();
 
     for key in source_file.keys {
@@ -82,20 +88,33 @@ pub fn run(options: CommandOptions, context: &CommandContext) -> CommandOutcome 
         }
     }
 
-    if let Err(error) = fs::write(&target_path, lines.join("\n")) {
+    let output = if lines.is_empty() {
+        String::new()
+    } else {
+        format!("{}\n", lines.join("\n"))
+    };
+
+    if let Err(error) = fs::write(&target_path, output) {
         return CommandOutcome::new(
             1,
             format!("{}: {}", target_path.display(), error),
         );
     }
 
+    let mut message = format!(
+        "Generated {} from {} using {} key(s).",
+        target_path.display(),
+        source_path.display(),
+        lines.len()
+    );
+
+    if !validation.warnings.is_empty() {
+        message.push_str(" Warnings: ");
+        message.push_str(&commands::format_list(&validation.warnings));
+    }
+
     CommandOutcome::new(
         0,
-        format!(
-            "Generated {} from {} using {} key(s).",
-            target_path.display(),
-            source_path.display(),
-            lines.len()
-        ),
+        message,
     )
 }

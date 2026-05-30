@@ -7,24 +7,34 @@ pub fn run() -> i32 {
 
     let outcome = match parsed.command {
         CliCommand::Scan(options) => {
-            let context = CommandContext::from_options(&options);
-            commands::scan::run(options, &context)
+            match CommandContext::from_options(&options) {
+                Ok(context) => commands::scan::run(options, &context),
+                Err(error) => CommandOutcome::error("EnvSentinel", error),
+            }
         }
         CliCommand::Diff(options) => {
-            let context = CommandContext::from_options(&options);
-            commands::diff::run(options, &context)
+            match CommandContext::from_options(&options) {
+                Ok(context) => commands::diff::run(options, &context),
+                Err(error) => CommandOutcome::error("EnvSentinel", error),
+            }
         }
         CliCommand::Validate(options) => {
-            let context = CommandContext::from_options(&options);
-            commands::validate::run(options, &context)
+            match CommandContext::from_options(&options) {
+                Ok(context) => commands::validate::run(options, &context),
+                Err(error) => CommandOutcome::error("EnvSentinel", error),
+            }
         }
         CliCommand::Init(options) => {
-            let context = CommandContext::from_options(&options);
-            commands::init::run(options, &context)
+            match CommandContext::from_options(&options) {
+                Ok(context) => commands::init::run(options, &context),
+                Err(error) => CommandOutcome::error("EnvSentinel", error),
+            }
         }
         CliCommand::Watch(options) => {
-            let context = CommandContext::from_options(&options);
-            commands::watch::run(options, &context)
+            match CommandContext::from_options(&options) {
+                Ok(context) => return commands::watch::run(options, &context, parsed.output_format),
+                Err(error) => CommandOutcome::error("EnvSentinel", error),
+            }
         }
         CliCommand::Help => CommandOutcome::usage(
             "EnvSentinel commands: scan, diff, validate, init, watch. Use --json or --markdown for alternate output.",

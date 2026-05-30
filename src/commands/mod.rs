@@ -2,7 +2,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::cli::args::CommandOptions;
-use crate::config::file::ConfigFile;
+use crate::config::file::{ConfigError, ConfigFile};
 use crate::env::parser::parse_file;
 use crate::env::model::EnvFile;
 
@@ -43,20 +43,20 @@ pub struct CommandContext {
 }
 
 impl CommandContext {
-    pub fn from_options(options: &CommandOptions) -> Self {
+    pub fn from_options(options: &CommandOptions) -> Result<Self, String> {
         let root = resolve_root(options);
         let config_path = options
             .config
             .clone()
             .map(|path| resolve_path(&root, &path))
             .unwrap_or_else(|| root.join("config").join("envsentinel.toml"));
-        let config = ConfigFile::load(&config_path);
+        let config = ConfigFile::load(&config_path).map_err(|error: ConfigError| error.to_string())?;
 
-        Self {
+        Ok(Self {
             root,
             config_path,
             config,
-        }
+        })
     }
 }
 

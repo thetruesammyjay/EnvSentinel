@@ -144,3 +144,23 @@ fn scan_can_render_markdown_output() {
 
     fs::remove_dir_all(&root).expect("cleanup temp project");
 }
+
+#[test]
+fn init_generates_env_example_from_env() {
+    let root = unique_temp_dir("envsentinel-init");
+
+    write_file(
+        root.join(".env"),
+        "API_KEY=secret\nDATABASE_URL=postgres://localhost\nDEBUG=true\n",
+    );
+
+    let (exit_code, stdout) = run_cli(&["init", "--root", root.to_str().expect("temp path")]);
+
+    let generated = fs::read_to_string(root.join(".env.example")).expect("read generated template");
+
+    assert_eq!(exit_code, 0);
+    assert!(stdout.contains("Generated"));
+    assert_eq!(generated, "API_KEY=\nDATABASE_URL=\nDEBUG=\n");
+
+    fs::remove_dir_all(&root).expect("cleanup temp project");
+}
